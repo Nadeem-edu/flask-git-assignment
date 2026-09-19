@@ -1,31 +1,50 @@
-#Q1. Task-1: JSON API Route
-from flask import Flask, request, jsonify
+from flask import Flask, request, render_template, jsonify, url_for
+from dotenv import load_dotenv
 import os
-import json
+import pymongo
+from pymongo.errors import ConnectionFailure, PyMongoError
+
+load_dotenv()
+
+MONGO_URI = os.getenv('MONGO_URI')
+
+
+try:
+    client = pymongo.MongoClient(MONGO_URI)
+    db = client.test
+    collection = db['flaskDB']
+
+    client.server_info()
+
+except (ConnectionFailure, PyMongoError):
+    collection = None
 
 app = Flask(__name__)
 
-DIR_PATH = os.path.dirname(os.path.abspath(__file__))
-
-BK_FILE = os.path.join(DIR_PATH, 'data.json')
-
 @app.route('/')
 def home():
-    return ' Welcome to the HomePage '
+    return render_template('index.html')
+
+@app.route('/submit', methods=['POST'])
+def submit():
+
+    if collection is None:
+        return jsonify({"error": "DB connection failed."}), 503
+
+    form_data = dict(request.form)
+
+    if not form_data or not any(form_data.values()):
+        return 'No data provided', 400
 
 
-@app.route('/api')
-def get_json_data():
     try:
-        with open(BK_FILE, 'r') as file:
-            file_data = json.load(file)
+        collection.insert_one(form_data)
+        return render_template('index.html'), 200
 
-        return jsonify(file_data), 200
+    except PyMongoError as e:
+        return jsonify({"error":f"Failed to save data to DB: {str(e)}"}), 500
+   
 
-    except FileNotFoundError:
-
-        return jsonify({"error":"File Missing"}), 404
-    
 
 if __name__=='__main__':
     app.run(debug=True)
