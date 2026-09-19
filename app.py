@@ -25,7 +25,7 @@ app = Flask(__name__)
 def home():
     return render_template('index.html')
 
-@app.route('/submit', methods=['POST'])
+@app.route('/submittodoitem', methods=['POST'])
 def submit():
 
     if collection is None:
